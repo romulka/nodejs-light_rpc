@@ -19,9 +19,6 @@ Sample server looks like:
 Sample client:
 
 	rpc.connect(5556, 'localhost', function(remote, conn){
-	var port = 5556;
-
-	var rpc = new light_rpc({
 		remote.combine(1, 2, function(res){
 			if(res != 3){
 				console.log('ERROR', res);
