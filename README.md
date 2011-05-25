@@ -1,5 +1,7 @@
 Simple RPC server/client based on NodeJS native 'net' lib sockets. 
 
+Tested with nodejs >= 0.4.2
+
 Sample server looks like:
 
 	var light_rpc = require('./index.js');
