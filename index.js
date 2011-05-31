@@ -173,7 +173,7 @@ function getComands(){
 			}
 		}
 
-		if(this.bufferBytes.length >= this.length){
+		if(this.bufferBytes && this.bufferBytes.length >= this.length){
 			var cmd = this.bufferBytes.slice(0, this.length).toString();
 			this.getLength = true;
 
