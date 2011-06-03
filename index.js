@@ -79,6 +79,9 @@ light_rpc.prototype.connect = function(port, host, callback){
 	}
 
 	connection.on('data', getOnDataFn(commandsCallback, lengthObj));
+	connection.on('error', function(err){
+		log.e(err);
+	});
 }
 
 function getOnDataFn(commandsCallback, lengthObj){
