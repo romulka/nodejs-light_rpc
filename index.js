@@ -10,6 +10,7 @@ var log = {
 
 var descrCmd = '__DESCR';
 var resultCmd = '__RESULT';
+var errorCmd = '__ERROR_CMD';
 
 var newLineCode = '\n'.charCodeAt(0);
 
@@ -51,6 +52,8 @@ light_rpc.prototype.connect = function(port, host, callback){
 	var connection = new net.createConnection(port, host);
 	var self = this;
 
+	connection.setKeepAlive(true);
+	
 	connection.on('connect', function(){
 		connection.write(command(descrCmd));
 	});
@@ -61,7 +64,14 @@ light_rpc.prototype.connect = function(port, host, callback){
 				self.callbacks[cmd.data.id].apply(this, cmd.data.args);
 				delete self.callbacks[cmd.data.id];
 			}
-		} else if(cmd.command == descrCmd){
+		}
+		else if(cmd.command == errorCmd){
+			if(self.callbacks[cmd.data.id]){
+				self.callbacks[cmd.data.id].call(this, cmd.data.err);
+				delete self.callbacks[cmd.data.id];
+			}
+		}
+		else if(cmd.command == descrCmd){
 			var remoteObj = {};
 
 			for(var p in cmd.data){
@@ -80,7 +90,15 @@ light_rpc.prototype.connect = function(port, host, callback){
 
 	connection.on('data', getOnDataFn(commandsCallback, lengthObj));
 	connection.on('error', function(err){
-		log.e(err);
+		log.e('CONNECTION_DAMN_ERROR', err);
+	});
+
+	connection.on('timeout', function(){
+		log.e('RPC connection timeout');
+	});
+
+	connection.on('end', function(){
+		log.e('RPC connection other side send end event');
 	});
 }
 
@@ -118,6 +136,11 @@ function getRemoteCallFunction(cmdName, callbacks, connection){
 }
 
 light_rpc.prototype.listen = function(port){
+	this.getServer();
+	this.server.listen(port);
+}
+
+light_rpc.prototype.getServer = function(){
 	var self = this;
 
 	var server = net.createServer(function(c) {
@@ -132,7 +155,15 @@ light_rpc.prototype.listen = function(port){
 				var args = cmd.data.args;
 				args.push(getSendCommandBackFunction(c, cmd.data.id));
 
-				self.wrapper[cmd.command].apply({}, args);
+				try{
+					self.wrapper[cmd.command].apply({}, args);
+				}
+				catch(err){
+					log.e(err);
+
+					var resultCommand = command(errorCmd, {id: cmd.data.id, err: err});
+					c.write(resultCommand);
+				}
 			}
 		}
 
@@ -149,7 +180,12 @@ light_rpc.prototype.listen = function(port){
 		});
 	});
 
-	server.listen(port);
+	this.server = server;
+	return server;
+}
+
+light_rpc.prototype.close = function(){
+	this.server.close();
 }
 
 function getSendCommandBackFunction(connection, cmdId){
