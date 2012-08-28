@@ -1,0 +1,35 @@
+{
+   "name": "nodejs-light_rpc",
+   "version": "0.1.0",
+   "description": "Simple RPC server/client based on NodeJS native 'net' lib sockets.",
+   "keywords": [
+       "rpc"
+   ],
+   "maintainers": [
+       {
+           "name": "Lakotko Roman",
+           "email": "romulka@gmail.com"
+       }
+   ],
+   "bugs": {
+       "url": "https://github.com/romulka/nodejs-light_rpc/issues" 
+   },
+   "licenses": [
+       {
+           "type": "BSD",
+           "url": "http://opensource.org/licenses/bsd-license.php" 
+       } 
+   ],
+   "repositories": [
+       {
+           "type": "git",
+           "url": "git://github.com/romulka/nodejs-light_rpc.git" 
+       } 
+   ],
+   "main": "./index",   
+   "dependencies": {},
+   "devDependencies": {
+     "seq": "0.3.5"
+   },
+   "engines": { "node": ">=0.4.0" }
+} 
