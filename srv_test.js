@@ -1,8 +1,7 @@
 var light_rpc = require('./index.js');
 var fs = require('fs');
 
-var file = JSON.parse(fs.readFileSync('/home/roman/data.json'));
-
+var file = {test: 'testObject'};
 var port = 5556;
 
 var rpc = new light_rpc({
