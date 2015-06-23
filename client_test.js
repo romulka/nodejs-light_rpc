@@ -1,8 +1,10 @@
+'use strict';
+
 var rpc = require('./index.js');
-var Step = require('step');
+var step = require('step');
 
 var total = 0;
-var intervalId = undefined;
+var intervalId;
 
 var started = 0;
 var finished = 0;
@@ -18,25 +20,26 @@ function next(){
 	console.log('next', total);
 	total++;
 
-	Step(
+	step(
 		function(){
 			for(var p = 0; p < 100; ++p){
-				rpc.connect(5556, 'localhost', function(remote, conn){
+				rpc.connect(6556, 'localhost', function(remote, conn){
 					started++;
 					remote.combine(1, 2, function(res){
-						if(res != 3){
+						if(res !== 3){
 							console.log('Achtung!!! ---------', res);
 						}
-						
-						remote.getFile(function(res){
-							var l = JSON.stringify(res).length
 
-							if(97143 != l){
-								console.log(l, 'TT_TT, Achtung')
+						remote.getFile(function(ires){
+							var l = JSON.stringify(ires).length;
+
+							if(l !== 21){
+								console.log(l, 'TT_TT, Achtung');
 							}
+
 							finished++;
 
-							if(finished == started){
+							if(finished === started){
 								console.log('res', started, '->', finished);
 							}
 
@@ -51,7 +54,7 @@ function next(){
 
 intervalId = setInterval(next, 1000);
 
-//rpc.connect(5556, 'localhost', function(remote, conn){
+//rpc.connect(6556, 'localhost', function(remote, conn){
 //	remote.combine(1, 2, function(res){
 //		console.log(res)
 //		remote.getFile(function(res2){

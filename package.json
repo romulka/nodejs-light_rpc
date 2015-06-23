@@ -28,10 +28,23 @@
    ],
    "main": "./index",   
    "dependencies": {
-     "uuid":"~0.0.2"
+     "node-uuid": "1.4.x"
    },
    "devDependencies": {
      "seq": "0.3.5"
    },
-   "engines": { "node": ">=0.4.0" }
+   "engines": { "node": ">=0.4.0" },
+     "eslintConfig": {
+      "ecmaFeatures": {
+          "forOf": true
+      },
+      "rules": {
+        "quotes": [1, "single"],
+        "no-underscore-dangle": false,
+        "no-use-before-define": false
+      },
+      "env": {
+          "node": true
+      }
+  }
 } 

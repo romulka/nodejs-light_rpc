@@ -1,22 +1,9 @@
+'use strict';
+
 var net = require('net');
-var uuid = require('uuid');
+var uuid = require('node-uuid');
 
-var idGenerator;
-
-if(uuid.generate){
-	idGenerator = uuid.generate;
-}
-else if(uuid.v4) {
-	idGenerator = uuid.v4;
-}
-else {
-	var idCounter = 0;
-
-	idGenerator = function(){
-		++idCounter;
-		return idCounter;
-	};
-}
+var idGenerator = uuid.v4;
 
 //var log = require('logger').create('RPC');
 var log = {
@@ -31,11 +18,11 @@ var errorCmd = '__ERROR_CMD';
 
 var newLineCode = '\n'.charCodeAt(0);
 
-exports = module.exports = light_rpc;
+exports = module.exports = LightRPC;
 
-function light_rpc(wrapper){
-	if(!(this instanceof light_rpc)) {
-		return new light_rpc(wrapper);
+function LightRPC(wrapper){
+	if(!(this instanceof LightRPC)) {
+		return new LightRPC(wrapper);
 	}
 
 	this.wrapper = wrapper;
@@ -55,40 +42,40 @@ function command(name, data){
 		command: name,
 		data: data
 	};
-	
+
 	var cmdStr = JSON.stringify(cmd);
 	return Buffer.byteLength(cmdStr) + '\n' + cmdStr;
 }
 
-light_rpc.prototype.connect = function(port, host, callback){
+LightRPC.prototype.connect = function(port, host, callback){
 	if(!callback){
 		callback = host;
 		host = 'localhost';
 	}
 
-	var connection = new net.createConnection(port, host);
+	var connection = net.createConnection(port, host);
 	var self = this;
 
 	connection.setKeepAlive(true);
-	
+
 	connection.on('connect', function(){
 		connection.write(command(descrCmd));
 	});
 
 	var commandsCallback = function(cmd){
-		if(cmd.command == resultCmd){
+		if(cmd.command === resultCmd){
 			if(self.callbacks[cmd.data.id]){
 				self.callbacks[cmd.data.id].apply(this, cmd.data.args);
 				delete self.callbacks[cmd.data.id];
 			}
 		}
-		else if(cmd.command == errorCmd){
+		else if(cmd.command === errorCmd){
 			if(self.callbacks[cmd.data.id]){
 				self.callbacks[cmd.data.id].call(this, cmd.data.err);
 				delete self.callbacks[cmd.data.id];
 			}
 		}
-		else if(cmd.command == descrCmd){
+		else if(cmd.command === descrCmd){
 			var remoteObj = {};
 
 			for(var p in cmd.data){
@@ -126,7 +113,7 @@ function getOnDataFn(commandsCallback, lengthObj){
 
 			lengthObj.bufferBytes.copy(tmpBuff, 0);
 			data.copy(tmpBuff, lengthObj.bufferBytes.length);
-			
+
 			lengthObj.bufferBytes = tmpBuff;
 		} else {
 			lengthObj.bufferBytes = data;
@@ -141,28 +128,33 @@ function getRemoteCallFunction(cmdName, callbacks, connection){
 	return function(){
 		var id = idGenerator();
 
-		if(typeof arguments[arguments.length-1] == 'function'){
-			callbacks[id] = arguments[arguments.length-1];
-		}		
+		if(typeof arguments[arguments.length - 1] === 'function'){
+			callbacks[id] = arguments[arguments.length - 1];
+		}
 
-		var args = parseArgumentsToArray.call(this, arguments);
+		var args = [];
+		for(var ai = 0, al = arguments.length; ai < al; ++ai){
+			if(typeof arguments[ai] !== 'function'){
+				args.push(arguments[ai]);
+			}
+		}
+
 		var newCmd = command(cmdName, {id: id, args: args});
-		
 		connection.write(newCmd);
 	};
 }
 
-light_rpc.prototype.listen = function(port){
+LightRPC.prototype.listen = function(port){
 	this.getServer();
 	this.server.listen(port);
 };
 
-light_rpc.prototype.getServer = function(){
+LightRPC.prototype.getServer = function(){
 	var self = this;
 
 	var server = net.createServer(function(c) {
 		var commandsCallback = function(cmd){
-			if(cmd.command == descrCmd){
+			if(cmd.command === descrCmd){
 					c.write(self.descrStr);
 			}
 			else if(!self.wrapper[cmd.command]){
@@ -191,7 +183,7 @@ light_rpc.prototype.getServer = function(){
 		};
 
 		c.on('data', getOnDataFn(commandsCallback, lengthObj));
-		
+
 		c.on('error', function(exception){
 			log.e(exception);
 		});
@@ -201,15 +193,21 @@ light_rpc.prototype.getServer = function(){
 	return server;
 };
 
-light_rpc.prototype.close = function(){
+LightRPC.prototype.close = function(){
 	this.server.close();
 };
 
 function getSendCommandBackFunction(connection, cmdId){
 	return function(){
-		var innerArgs = parseArgumentsToArray.call({}, arguments);
-		var resultCommand = command(resultCmd, {id: cmdId, args: innerArgs});
+		var innerArgs = [];
 
+		for(var ai = 0, al = arguments.length; ai < al; ++ai){
+			if(typeof arguments[ai] !== 'function'){
+				innerArgs.push(arguments[ai]);
+			}
+		}
+
+		var resultCommand = command(resultCmd, {id: cmdId, args: innerArgs});
 		connection.write(resultCommand);
 	};
 }
@@ -225,7 +223,7 @@ function getComands(){
 				this.length = Number(this.bufferBytes.slice(0, i).toString());
 				this.getLength = false;
 				// (i + 1) for \n symbol
-				this.bufferBytes = clearBuffer(this.bufferBytes, i + 1); 
+				this.bufferBytes = clearBuffer(this.bufferBytes, i + 1);
 			}
 		}
 
@@ -242,8 +240,8 @@ function getComands(){
 				log.e(this.length, this.bufferBytes.toString());
 				return;
 			}
+
 			commands.push(parsedCmd);
-			
 			this.bufferBytes = clearBuffer(this.bufferBytes, this.length);
 
 			if(this.bufferBytes && this.bufferBytes.length > 0){
@@ -259,7 +257,7 @@ function getComands(){
 function getNewlineIndex(buffer){
 	if(buffer){
 		for(var i = 0, l = buffer.length; i < l; ++i){
-			if(buffer[i] == newLineCode){
+			if(buffer[i] === newLineCode){
 				return i;
 			}
 		}
@@ -276,19 +274,7 @@ function clearBuffer(buffer, length){
 	return undefined;
 }
 
-light_rpc.connect = function(){
-	var rpc = light_rpc();
+LightRPC.connect = function(){
+	var rpc = new LightRPC();
 	return rpc.connect.apply(rpc, arguments);
 };
-
-function parseArgumentsToArray(){
-	var args = [];
-	
-	for(var ar in arguments[0]){
-		if(typeof arguments[0][ar] != 'function'){
-			args.push(arguments[0][ar]);
-		}
-	}
-	
-	return args;
-}
