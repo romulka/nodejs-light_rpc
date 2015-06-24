@@ -1,9 +1,11 @@
 'use strict';
 
 var net = require('net');
-var uuid = require('node-uuid');
 
-var idGenerator = uuid.v4;
+var idGenerator = function(a){
+	return a ? (a ^ Math.random() * 16 >> a / 4).toString(16) : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).
+		replace(/[018]/g, idGenerator);
+};
 
 //var log = require('logger').create('RPC');
 var log = {
@@ -12,9 +14,9 @@ var log = {
 	}
 };
 
-var descrCmd = '__DESCR';
-var resultCmd = '__RESULT';
-var errorCmd = '__ERROR_CMD';
+var descrCmd = '__D';
+var resultCmd = '__R';
+var errorCmd = '__E';
 
 var newLineCode = '\n'.charCodeAt(0);
 
@@ -35,16 +37,6 @@ function LightRPC(wrapper){
 
 	this.descrStr = command(descrCmd, this.description);
 	return this;
-}
-
-function command(name, data){
-	var cmd = {
-		command: name,
-		data: data
-	};
-
-	var cmdStr = JSON.stringify(cmd);
-	return Buffer.byteLength(cmdStr) + '\n' + cmdStr;
 }
 
 LightRPC.prototype.connect = function(port, host, callback){
@@ -106,44 +98,6 @@ LightRPC.prototype.connect = function(port, host, callback){
 	});
 };
 
-function getOnDataFn(commandsCallback, lengthObj){
-	return function(data){
-		if(lengthObj.bufferBytes && lengthObj.bufferBytes.length > 0){
-			var tmpBuff = new Buffer(lengthObj.bufferBytes.length + data.length);
-
-			lengthObj.bufferBytes.copy(tmpBuff, 0);
-			data.copy(tmpBuff, lengthObj.bufferBytes.length);
-
-			lengthObj.bufferBytes = tmpBuff;
-		} else {
-			lengthObj.bufferBytes = data;
-		}
-
-		var commands = getComands.call(lengthObj);
-		commands.forEach(commandsCallback);
-	};
-}
-
-function getRemoteCallFunction(cmdName, callbacks, connection){
-	return function(){
-		var id = idGenerator();
-
-		if(typeof arguments[arguments.length - 1] === 'function'){
-			callbacks[id] = arguments[arguments.length - 1];
-		}
-
-		var args = [];
-		for(var ai = 0, al = arguments.length; ai < al; ++ai){
-			if(typeof arguments[ai] !== 'function'){
-				args.push(arguments[ai]);
-			}
-		}
-
-		var newCmd = command(cmdName, {id: id, args: args});
-		connection.write(newCmd);
-	};
-}
-
 LightRPC.prototype.listen = function(port){
 	this.getServer();
 	this.server.listen(port);
@@ -196,6 +150,59 @@ LightRPC.prototype.getServer = function(){
 LightRPC.prototype.close = function(){
 	this.server.close();
 };
+
+LightRPC.connect = function(){
+	var rpc = new LightRPC();
+	return rpc.connect.apply(rpc, arguments);
+};
+
+function command(name, data){
+	var cmd = {
+		command: name,
+		data: data
+	};
+
+	var cmdStr = JSON.stringify(cmd);
+	return Buffer.byteLength(cmdStr) + '\n' + cmdStr;
+}
+
+function getOnDataFn(commandsCallback, lengthObj){
+	return function(data){
+		if(lengthObj.bufferBytes && lengthObj.bufferBytes.length > 0){
+			var tmpBuff = new Buffer(lengthObj.bufferBytes.length + data.length);
+
+			lengthObj.bufferBytes.copy(tmpBuff, 0);
+			data.copy(tmpBuff, lengthObj.bufferBytes.length);
+
+			lengthObj.bufferBytes = tmpBuff;
+		} else {
+			lengthObj.bufferBytes = data;
+		}
+
+		var commands = getComands.call(lengthObj);
+		commands.forEach(commandsCallback);
+	};
+}
+
+function getRemoteCallFunction(cmdName, callbacks, connection){
+	return function(){
+		var id = idGenerator();
+
+		if(typeof arguments[arguments.length - 1] === 'function'){
+			callbacks[id] = arguments[arguments.length - 1];
+		}
+
+		var args = [];
+		for(var ai = 0, al = arguments.length; ai < al; ++ai){
+			if(typeof arguments[ai] !== 'function'){
+				args.push(arguments[ai]);
+			}
+		}
+
+		var newCmd = command(cmdName, {id: id, args: args});
+		connection.write(newCmd);
+	};
+}
 
 function getSendCommandBackFunction(connection, cmdId){
 	return function(){
@@ -273,8 +280,3 @@ function clearBuffer(buffer, length){
 
 	return undefined;
 }
-
-LightRPC.connect = function(){
-	var rpc = new LightRPC();
-	return rpc.connect.apply(rpc, arguments);
-};
