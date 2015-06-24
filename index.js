@@ -7,10 +7,14 @@ var idGenerator = function(a){
 		replace(/[018]/g, idGenerator);
 };
 
-//var log = require('logger').create('RPC');
 var log = {
 	e: function(){
-		console.log(arguments);
+		var args = new Array(arguments.length);
+		for(var ai = 0, al = arguments.length; ai < al; ++ai){
+			args[ai] = arguments[ai];
+		}
+
+		console.log(args);
 	}
 };
 
@@ -22,10 +26,12 @@ var newLineCode = '\n'.charCodeAt(0);
 
 exports = module.exports = LightRPC;
 
-function LightRPC(wrapper){
+function LightRPC(wrapper, logger){
 	if(!(this instanceof LightRPC)) {
-		return new LightRPC(wrapper);
+		return new LightRPC(wrapper, logger);
 	}
+
+	log = logger || log;
 
 	this.wrapper = wrapper;
 	this.description = {};
